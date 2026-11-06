@@ -1,5 +1,6 @@
 'use strict';
 const $ = id => document.getElementById(id);
+let originalName = 'photo', busy = false, cooldown = 0;
 let image = null, coordinates = null, sequence = 0, placeSource = '', dateSource = '', lookupAt = 0, pendingInstall;
 const geocodeCache = new Map();
 function sourceLabels() {
@@ -8,17 +9,20 @@ function sourceLabels() {
 }
 function wrap(ctx, text, width) {
   const lines = []; let line = '';
-  for (const character of text) {
-    if (line && ctx.measureText(line + character).width > width) { lines.push(line); line = ''; }
-    line += character;
+  for (const word of text.split(/\s+/)) {
+    if (line && ctx.measureText(line + ' ' + word).width > width) { lines.push(line); line = ''; }
+    for (const character of (line ? ' ' : '') + word) {
+      if (line && ctx.measureText(line + character).width > width) { lines.push(line); line = ''; }
+      line += character;
+    }
   }
   if (line) lines.push(line);
   return lines;
 }
-function draw() {
+function draw(exporting = false) {
   if (!image) return;
   const canvas = $('canvas'), ctx = canvas.getContext('2d');
-  const scale = Math.min(1, Math.sqrt(20000000 / (image.naturalWidth * image.naturalHeight)));
+  const scale = Math.min(1, (exporting ? Number($('resolution').value) : 1400) / Math.max(image.naturalWidth, image.naturalHeight), Math.sqrt(20000000 / (image.naturalWidth * image.naturalHeight)));
   canvas.width = Math.round(image.naturalWidth * scale); canvas.height = Math.round(image.naturalHeight * scale);
   ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
   const font = Math.max(10, Math.min(canvas.width, canvas.height) * Number($('size').value) / 100);
@@ -34,13 +38,15 @@ function draw() {
   if (provenance.length) rows.push(...wrap(ctx, provenance.join(' · '), canvas.width - 2 * padding));
   if (!rows.length) return;
   const height = rows.length * lineHeight + padding * 2;
-  const y = $('position').value === 'top' ? 0 : canvas.height - height;
+  let y = $('position').value === 'top' ? 0 : canvas.height - height;
+  if ($('position').value === 'caption') { const photo = document.createElement('canvas'); photo.width = canvas.width; photo.height = canvas.height; photo.getContext('2d').drawImage(canvas,0,0); y = canvas.height; canvas.height += Math.ceil(height); ctx.drawImage(photo,0,0); ctx.font = `600 ${font}px system-ui, sans-serif`; }
   ctx.fillStyle = 'rgba(10,20,32,.76)'; ctx.fillRect(0, y, canvas.width, height);
   ctx.fillStyle = '#fff'; ctx.textBaseline = 'top';
   rows.forEach((row, i) => ctx.fillText(row, padding, y + padding + i * lineHeight));
 }
 $('photo').addEventListener('change', async event => {
   const file = event.target.files[0]; if (!file) return;
+  originalName = file.name.replace(/\.[^.]+$/, '') || 'photo';
   const ticket = ++sequence;
   image = null; coordinates = null; placeSource = ''; dateSource = '';
   for (const id of ['place', 'address', 'captured', 'zone']) $(id).value = '';
@@ -67,35 +73,37 @@ $('photo').addEventListener('change', async event => {
   } catch { if (ticket === sequence) $('status').textContent = 'This photo could not be opened. Try an original JPEG, PNG, or WebP file.'; }
   finally { URL.revokeObjectURL(url); }
 });
-for (const id of ['place', 'address', 'captured', 'zone', 'position', 'size', 'gps']) $(id).addEventListener('input', () => {
+for (const id of ['place', 'address', 'captured', 'zone', 'position', 'size', 'gps', 'resolution']) $(id).addEventListener('input', () => {
   if (id === 'place' || id === 'address') placeSource = 'user-provided';
   if (id === 'captured' || id === 'zone') dateSource = 'user-provided';
   sourceLabels(); draw();
 });
 $('lookup').addEventListener('click', async () => {
-  if (!coordinates || Date.now() - lookupAt < 1100) return;
+  if (!coordinates || busy || Date.now() < cooldown) return;
+  if (($('place').value || $('address').value) && !confirm('Replace your current place details with a GPS lookup?')) return;
   let url;
   try { url = new URL($('endpoint').value); if (url.protocol !== 'https:' || url.username || url.password) throw Error(); }
   catch { $('status').textContent = 'Enter an authorized HTTPS reverse-geocoding endpoint in Location lookup settings first.'; return; }
   const ticket = sequence, originalPlace = $('place').value, originalAddress = $('address').value;
   url.searchParams.set('format', 'jsonv2'); url.searchParams.set('lat', coordinates.latitude); url.searchParams.set('lon', coordinates.longitude);
-  lookupAt = Date.now(); $('lookup').disabled = true; $('status').textContent = 'Looking up coordinates online…';
+  busy = true; lookupAt = Date.now(); $('lookup').disabled = true; $('status').textContent = 'Looking up coordinates online…';
   try {
     const key = url.href;
     let data = geocodeCache.get(key);
     if (!data) { const response = await fetch(url, {credentials: 'omit', referrerPolicy: 'strict-origin-when-cross-origin', signal: AbortSignal.timeout(12000)}); if (!response.ok) throw Error(); data = await response.json(); if (typeof data.display_name !== 'string') throw Error(); geocodeCache.set(key, data); }
     if (ticket !== sequence) return;
     if ($('place').value !== originalPlace || $('address').value !== originalAddress) { $('status').textContent = 'Your manual edits were kept. Try lookup again to replace them.'; return; }
-    $('place').value = (data.name || data.display_name.split(',')[0]).slice(0,120); $('address').value = data.display_name.slice(0,200);
+    $('place').value = (data.name || data.display_name.split(',')[0]).slice(0,120); const parts = data.display_name.split(',').map(part => part.trim());
+    $('address').value = parts.filter(part => part.toLowerCase() !== $('place').value.toLowerCase()).slice(0,4).join(', ').slice(0,200);
     placeSource = 'GPS lookup (approximate)'; sourceLabels(); draw(); $('status').textContent = 'Approximate place found. Review and correct it before exporting.';
   } catch { if (ticket === sequence) $('status').textContent = 'Location lookup unavailable. You can still enter a place manually and export offline.'; }
-  finally { if (ticket === sequence) setTimeout(() => { if (ticket === sequence) $('lookup').disabled = !coordinates; }, 1100); }
+  finally { busy = false; cooldown = Date.now() + 2000; }
 });
 $('download').addEventListener('click', () => {
-  draw(); $('canvas').toBlob(blob => {
+  draw(true); $('canvas').toBlob(blob => {
     if (!blob) { $('status').textContent = 'Export failed. Try a smaller photo.'; return; }
     const url = URL.createObjectURL(blob), link = document.createElement('a');
-    link.href = url; link.download = 'photostamp.jpg'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 60000);
+    link.href = url; link.download = `${originalName}_stamped.jpg`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 60000);
   }, 'image/jpeg', .94);
 });
 window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); pendingInstall = event; $('install').hidden = false; });
@@ -105,3 +113,22 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-wo
   const update = () => { if (registration.waiting) $('offline').textContent = 'Update ready. Close all PhotoStamp windows and reopen to use it.'; };
   update(); registration.addEventListener('updatefound', () => registration.installing?.addEventListener('statechange', update));
 }).catch(() => { $('offline').textContent = 'Offline setup unavailable. Keep this page online and reload to try again.'; });
+
+setInterval(() => {
+ const remaining = Math.max(0, Math.ceil((cooldown - Date.now()) / 1000));
+ $('lookup').disabled = !coordinates || busy || remaining > 0;
+ $('lookup').textContent = busy ? 'Looking up…' : remaining ? `Try again in ${remaining}s…` : 'Look up place from photo GPS';
+ $('share').disabled = !image;
+}, 200);
+$('share').hidden = !navigator.canShare;
+$('share').addEventListener('click', () => {
+ if (!image) return;
+ draw(true);
+ const name = originalName;
+ $('canvas').toBlob(async blob => {
+  if (!blob) return;
+  const file = new File([blob], `${name}_stamped.jpg`, {type:'image/jpeg'});
+  try { if (!navigator.canShare({files:[file]})) throw Error(); await navigator.share({files:[file]}); }
+  catch(error) { if (error.name !== 'AbortError') $('status').textContent = 'Sharing unavailable. Use Download stamped JPEG instead.'; }
+ }, 'image/jpeg', .94);
+});
