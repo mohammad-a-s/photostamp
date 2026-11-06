@@ -1,5 +1,5 @@
 const PREFIX = `photostamp-${new URL(self.registration.scope).pathname}-`;
-const CACHE = `${PREFIX}v2-3`;
+const CACHE = `${PREFIX}v2-4`;
 const ASSETS = ['./', './index.html', './style.css', './app.js', './manifest.webmanifest', './lib/exifr.min.js', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS))));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith(PREFIX) && key !== CACHE).map(key => caches.delete(key))))));
@@ -11,3 +11,5 @@ self.addEventListener('fetch', event => {
   if (!allowed.includes(url.href)) return;
   event.respondWith(caches.open(CACHE).then(async cache => (await cache.match(event.request)) || fetch(event.request)));
 });
+
+self.addEventListener('message', event => { if (event.data?.type === 'SKIP_WAITING') self.skipWaiting(); });
