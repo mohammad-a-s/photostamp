@@ -68,7 +68,11 @@ Before release, test an original JPEG with GPS and DateTimeOriginal, a stripped 
 
 When editing cached files, bump `CACHE` in `site/service-worker.js` and update `ASSETS` if files change. The service worker uses a versioned app shell and removes only obsolete PhotoStamp caches within this registration's scope. For rollback, revert the source change and use a new cache version. Test offline after every cache change.
 
-Application licensing has not been selected; the bundled exifr dependency retains its own MIT license.
+## License
+
+Copyright (c) 2026 mohammad-a-s. PhotoStamp is licensed under the [MIT License](LICENSE).
+
+The bundled exifr dependency retains its [own MIT license](site/lib/exifr.LICENSE). OpenStreetMap data retains its separate attribution and ODbL terms.
 
 ## v2.1 editing and export improvements
 
