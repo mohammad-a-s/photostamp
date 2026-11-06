@@ -2,11 +2,13 @@
 
 A mobile-friendly, installable photo editor for adding place, capture time, and GPS overlays. Static HTML, CSS, JavaScript, and Canvas; no backend or build step.
 
-Expected production URL after deployment: https://mohammad-a-s.github.io/photostamp/
+Open PhotoStamp: https://mohammad-a-s.github.io/photostamp/
+
+Documentation: [User guide and troubleshooting](docs/USER_GUIDE.md) · [Deployment and updates](docs/DEPLOYMENT.md) · [Changelog](CHANGELOG.md)
 
 ## Status and provenance
 
-Reconstructed from the accessible “Photo Overlay Web App” conversation requirements. The previous v2 HTML/ZIP was not accessible; this is a new implementation, not a recovered copy. The repository initially contained only a README. This pull request prepares publication; it does not mean the production site is already live.
+Reconstructed from the accessible “Photo Overlay Web App” conversation requirements. The previous v2 HTML/ZIP was not accessible; this is a new implementation, not a recovered copy. The repository initially contained only a README. The PWA is published through GitHub Pages. The clean-caption revision is merged into main.
 
 ## Publish on GitHub Pages
 
@@ -25,13 +27,13 @@ Alternative without Actions: publish from a branch with the contents of `site/` 
 - Android: open in Chrome → Install PhotoStamp or browser menu → Install app / Add to Home screen.
 - Desktop: use the browser's install button when offered. Installation UI depends on browser support.
 
-Load once online and wait for “App files saved for offline editing.” Then test in airplane mode. Browsers may evict cached data; reopening online restores it. Location lookup always requires a connection. New releases wait until all PhotoStamp windows close before activating.
+Load once online and wait for “App files saved for offline editing.” Then test in airplane mode. Browsers may evict cached data; reopening online restores it. Location lookup always requires a connection. Use Update app when offered, or close all PhotoStamp windows and reopen to activate a waiting release. Save your current export first.
 
 ## Use and privacy
 
 Choose an original photo. Supported decoding depends on your browser; JPEG, PNG, and WebP are the safest choices. HEIC may need conversion to JPEG first. Local `exifr` reads GPS and original capture time. Missing metadata remains blank rather than being inferred from the device clock or current location. EXIF time is shown as the camera's wall-clock value; the original UTC offset is included if available. You may supply an explicit zone label.
 
-Enter or correct the place and time, choose the stamp position and size, then download a JPEG. The exported stamp identifies manual values as user-provided and geocoded names as approximate. This is a documentation aid, not authentication or proof of location/time. Export uses browser-corrected image orientation and a maximum 20 megapixels to limit memory use; large images can still exceed mobile memory. Canvas export does not preserve original EXIF metadata. Visible coordinates remain visible in the exported pixels when enabled.
+Enter or correct the place and time, choose the stamp position and size, then download a JPEG. The editor shows source labels for manual values, EXIF values, and approximate GPS lookup results. Source descriptions are omitted from the exported stamp. This is a documentation aid, not authentication or proof of location/time. Export uses browser-corrected image orientation and a maximum 20 megapixels to limit memory use; large images can still exceed mobile memory. Canvas export does not preserve original EXIF metadata. Visible coordinates remain visible in the exported pixels when enabled.
 
 Photos stay in page memory and are never uploaded. The service worker caches only the enumerated application files, never photos or geocoding responses. Closing/reloading loses the current editing session. Hosting providers still receive ordinary page requests.
 
@@ -70,7 +72,7 @@ Application licensing has not been selected; the bundled exifr dependency retain
 
 ## v2.1 editing and export improvements
 
-Choose a photo, edit its stamp, then save or share. Caption below photo is the default and preserves the full image; top and bottom overlays remain available. Place, address, capture time and GPS can be hidden independently. Source labels track each field, and Restore original metadata resets manual edits. Clear photo discards the current photo and fields.
+Choose a photo, edit its stamp, then save or share. Caption below photo is the default and preserves the full image; top and bottom overlays remain available. Place, address, capture time and GPS can be hidden independently. Source labels in the editor track each field, and Restore original metadata resets manual edits. Clear photo discards the current photo and fields.
 
 Preview uses a maximum 1400 px edge; export uses the selected original (photo capped at 20 MP) or 2048 px sharing size. A caption adds height to the exported image. JPEG names retain the original basename with `_stamped`. Native sharing is offered when supported and falls back to Download instructions if unavailable.
 
@@ -79,3 +81,9 @@ Appearance preferences are stored locally. Provider persistence is opt-in and ca
 Update app is shown when a new service worker is waiting. Updating reloads the page and clears the current editing session, with a save-first confirmation when a photo is loaded.
 
 Validation for this revision used Chrome with synthetic JPEG fixtures and mocked provider responses: EXIF/field provenance, caption dimensions, source filenames, restore/clear, preferences/provider persistence, cooldown across tabs, HTTP 429 Retry-After, 1400 px previews and 2048 px export, mobile width, and offline editing. Native share handoff was tested with a browser stub; the actual iPhone/Android share sheet and installation still require device verification.
+
+## v2.2 clean caption default
+
+The default caption sits below the photo, with a stronger place heading and smaller, softer supporting text. Place, address and capture time are included when present; GPS coordinates are off by default and can be enabled. Dates display as `6 Nov 2026 · 11:39 · UTC+08:00` when the offset exists. Seconds and field source descriptions are omitted from exports. The full address is still editable: shorten it manually for a compact locality line. There is no separate preset selector.
+
+Existing installations receive caption position and GPS-off defaults once on first loading this revision; subsequent appearance choices are remembered. Source labels remain in the editor. A lookup may return a nearby business rather than the photographed venue: review the place before export. See the [user guide](docs/USER_GUIDE.md).
