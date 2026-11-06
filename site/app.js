@@ -30,13 +30,13 @@ function draw(exporting = false) {
   let padding = font, lineHeight = font * 1.45;
   ctx.font = `600 ${font}px system-ui, sans-serif`;
   const rows = [];
-  for (const value of [$('showPlace').checked ? $('place').value.trim() : '', $('showAddress').checked ? $('address').value.trim() : '', ($('showTime').checked ? $('captured').value : '').replace('T', ' ') + ($('showTime').checked && $('captured').value && $('zone').value.trim() ? ` ${$('zone').value.trim()}` : ''), coordinates && $('gps').checked ? `GPS: ${coordinates.latitude.toFixed(6)}, ${coordinates.longitude.toFixed(6)}` : '']) {
+  const stampTime = $('captured').value;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2})/.exec(stampTime);
+  const prettyTime = match ? `${Number(match[3])} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(match[2])-1]} ${match[1]} · ${match[4]}` : stampTime;
+  const zone = $('zone').value.trim().replace(/^([+-]\d{2}:\d{2})$/, 'UTC$1');
+  for (const value of [$('showPlace').checked ? $('place').value.trim() : '', $('showAddress').checked ? $('address').value.trim() : '', $('showTime').checked && prettyTime ? prettyTime + (zone ? ` · ${zone}` : '') : '', coordinates && $('gps').checked ? `GPS: ${coordinates.latitude.toFixed(6)}, ${coordinates.longitude.toFixed(6)}` : '']) {
     if (value) rows.push(...wrap(ctx, value, canvas.width - 2 * padding));
   }
-  const provenance = [];
-  for (const [id, flag] of [['place','showPlace'],['address','showAddress'],['captured','showTime'],['zone','showTime']]) { if ($(flag).checked && $(id).value.trim()) provenance.push(`${id === 'captured' ? 'Time' : id}: ${fieldSources[id] || 'user-provided'}`); }
-
-  if (provenance.length) rows.push(...wrap(ctx, provenance.join(' · '), canvas.width - 2 * padding));
   if (!rows.length) return;
   if ($('position').value !== 'caption' && rows.length * lineHeight + padding * 2 > canvas.height * .65) { const shrink = canvas.height * .65 / (rows.length * lineHeight + padding * 2); font *= shrink; padding *= shrink; lineHeight *= shrink; ctx.font = `600 ${font}px system-ui, sans-serif`; }
   const height = rows.length * lineHeight + padding * 2;
@@ -44,7 +44,12 @@ function draw(exporting = false) {
   if ($('position').value === 'caption') { const photo = document.createElement('canvas'); photo.width = canvas.width; photo.height = canvas.height; photo.getContext('2d').drawImage(canvas,0,0); y = canvas.height; canvas.height += Math.ceil(height); ctx.drawImage(photo,0,0); ctx.font = `600 ${font}px system-ui, sans-serif`; }
   ctx.fillStyle = 'rgba(10,20,32,.76)'; ctx.fillRect(0, y, canvas.width, height);
   ctx.fillStyle = '#fff'; ctx.textBaseline = 'top';
-  rows.forEach((row, i) => ctx.fillText(row, padding, y + padding + i * lineHeight));
+  rows.forEach((row, i) => {
+    const heading = i === 0 && $('showPlace').checked && $('place').value.trim();
+    ctx.font = `${heading ? 600 : 400} ${heading ? font : font * .88}px system-ui, sans-serif`;
+    ctx.fillStyle = heading ? '#fff' : '#cbd5e1';
+    ctx.fillText(row, padding, y + padding + i * lineHeight);
+  });
 }
 $('photo').addEventListener('change', async event => {
   const file = event.target.files[0]; if (!file) return;
@@ -145,7 +150,7 @@ $('share').addEventListener('click', () => {
 
 const PREFS = ['position','size','resolution','gps','showPlace','showAddress','showTime'];
 function savePreferences() { try { localStorage.setItem('photostamp-style', JSON.stringify(Object.fromEntries(PREFS.map(id => [id, $(id).type === 'checkbox' ? $(id).checked : $(id).value])))); } catch {} }
-try { const prefs = JSON.parse(localStorage.getItem('photostamp-style') || '{}'); for (const id of PREFS) if (id in prefs) { if ($(id).type === 'checkbox') $(id).checked = !!prefs[id]; else $(id).value = prefs[id]; } const endpoint = localStorage.getItem('photostamp-provider'); if (endpoint) { $('endpoint').value = endpoint; $('rememberProvider').checked = true; } } catch {}
+try { const prefs = JSON.parse(localStorage.getItem('photostamp-style') || '{}'); if (!localStorage.getItem('photostamp-clean-default')) { prefs.gps = false; prefs.position = 'caption'; localStorage.setItem('photostamp-clean-default', '1'); localStorage.setItem('photostamp-style', JSON.stringify(prefs)); } for (const id of PREFS) if (id in prefs) { if ($(id).type === 'checkbox') $(id).checked = !!prefs[id]; else $(id).value = prefs[id]; } const endpoint = localStorage.getItem('photostamp-provider'); if (endpoint) { $('endpoint').value = endpoint; $('rememberProvider').checked = true; } } catch {}
 function rememberProvider() { try { if ($('rememberProvider').checked) localStorage.setItem('photostamp-provider', $('endpoint').value); else localStorage.removeItem('photostamp-provider'); } catch {} }
 $('rememberProvider').addEventListener('change', rememberProvider); $('endpoint').addEventListener('change', rememberProvider);
 function sharedDeadline() { try { return Math.max(cooldown, Number(localStorage.getItem('photostamp-cooldown')) || 0); } catch { return cooldown; } }
