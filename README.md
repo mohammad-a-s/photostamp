@@ -67,3 +67,15 @@ Before release, test an original JPEG with GPS and DateTimeOriginal, a stripped 
 When editing cached files, bump `CACHE` in `site/service-worker.js` and update `ASSETS` if files change. The service worker uses a versioned app shell and removes only obsolete PhotoStamp caches within this registration's scope. For rollback, revert the source change and use a new cache version. Test offline after every cache change.
 
 Application licensing has not been selected; the bundled exifr dependency retains its own MIT license.
+
+## v2.1 editing and export improvements
+
+Choose a photo, edit its stamp, then save or share. Caption below photo is the default and preserves the full image; top and bottom overlays remain available. Place, address, capture time and GPS can be hidden independently. Source labels track each field, and Restore original metadata resets manual edits. Clear photo discards the current photo and fields.
+
+Preview uses a maximum 1400 px edge; export uses the selected original (photo capped at 20 MP) or 2048 px sharing size. A caption adds height to the exported image. JPEG names retain the original basename with `_stamped`. Native sharing is offered when supported and falls back to Download instructions if unavailable.
+
+Appearance preferences are stored locally. Provider persistence is opt-in and can be cleared by unchecking Remember provider. Photos, edited place names, GPS lookup results and capture details remain session-only. A cooldown timestamp is also stored to coordinate tabs. Browsers with Web Locks serialize lookups across tabs; others use best-effort timestamp coordination. Requests are disabled during lookup and for two seconds after completion, with longer Retry-After delays honored. This is per device and does not enforce Nominatim's aggregate application traffic limit.
+
+Update app is shown when a new service worker is waiting. Updating reloads the page and clears the current editing session, with a save-first confirmation when a photo is loaded.
+
+Validation for this revision used Chrome with synthetic JPEG fixtures and mocked provider responses: EXIF/field provenance, caption dimensions, source filenames, restore/clear, preferences/provider persistence, cooldown across tabs, HTTP 429 Retry-After, 1400 px previews and 2048 px export, mobile width, and offline editing. Native share handoff was tested with a browser stub; the actual iPhone/Android share sheet and installation still require device verification.
