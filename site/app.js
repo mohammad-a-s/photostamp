@@ -15,9 +15,10 @@ function updateProvider() {
  $('providerStatus').textContent = official ? 'Using the configured PhotoStamp service.' : $('endpoint').value ? 'Using a custom service.' : 'No service configured. You can still enter a place manually.';
 }
 function syncWorkspace() {
+ window.dispatchEvent(new Event('photostamp:photochange'));
  $('workspace').hidden = !image;
  $('chooseLabel').textContent = image ? 'Choose another photo' : 'Choose photo';
- $('lookupHint').textContent = coordinates ? 'Location found in photo. Find place to add a name.' : 'This photo has no location information. Enter a place below.';
+ $('lookupHint').textContent = coordinates ? 'Location found in photo. Find place to add a name.' : 'This photo has no location information. Choose a location or type one below.';
  $('gpsHelp').hidden = !!coordinates;
  $('coordinateDetails').textContent = coordinates ? `GPS: ${coordinates.latitude.toFixed(6)}, ${coordinates.longitude.toFixed(6)}` : 'No GPS coordinates in this file.';
 }
@@ -92,7 +93,7 @@ $('photo').addEventListener('change', async event => {
       if ($('captured').value) dateSource = 'photo EXIF';
     }
     $('zone').value = typeof metadata.OffsetTimeOriginal === 'string' ? metadata.OffsetTimeOriginal : '';
-    $('status').textContent = `${coordinates ? 'Photo GPS found.' : 'No location in this photo; enter a place manually.'} ${dateSource ? 'Capture time found.' : 'Capture time missing; enter it manually if known.'}${metadataError ? ' Metadata could not be read.' : ''}`;
+    $('status').textContent = `${coordinates ? 'Photo GPS found.' : 'No location in this photo; choose a location or type one.'} ${dateSource ? 'Capture time found.' : 'Capture time missing; enter it manually if known.'}${metadataError ? ' Metadata could not be read.' : ''}`;
     originalFields = Object.fromEntries(['place','address','captured','zone'].map(id => [id, $(id).value]));
     fieldSources = {captured: dateSource, zone: $('zone').value ? 'photo EXIF' : ''};
     $('lookup').disabled = !coordinates || busy || Date.now() < sharedDeadline(); $('download').disabled = false;
@@ -124,7 +125,7 @@ async function lookup() {
     $('place').value = (data.name || data.display_name.split(',')[0]).slice(0,120); const parts = (data.address || data.display_name).split(',').map(part => part.trim());
     $('address').value = [...new Set(parts)].filter(part => part.toLowerCase() !== $('place').value.toLowerCase()).slice(0,4).join(', ').slice(0,200);
     fieldSources.place = fieldSources.address = 'GPS lookup (approximate)';
-    placeSource = 'GPS lookup (approximate)'; sourceLabels(); draw(); $('status').textContent = 'Approximate place found. Review and correct it before exporting.';
+    placeSource = 'GPS lookup (approximate)'; $('chosenLocation').hidden = true; sourceLabels(); draw(); $('status').textContent = 'Approximate place found. Review and correct it before exporting.';
   } catch (error) { if (ticket === sequence) $('status').textContent = error.name === 'TimeoutError' ? 'Lookup timed out. Try again or enter a place manually.' : error.message.includes('location service') ? error.message : 'Cannot find a place right now. Check your connection or enter a place manually.'; }
   finally { busy = false; cooldown = Math.max(cooldown, Date.now() + 2000); publishDeadline(cooldown); }
 }
@@ -178,7 +179,7 @@ function rememberProvider() { try { if ($('rememberProvider').checked) localStor
 $('rememberProvider').addEventListener('change', rememberProvider); $('endpoint').addEventListener('change', rememberProvider);
 function sharedDeadline() { try { return Math.max(cooldown, Number(localStorage.getItem('photostamp-cooldown')) || 0); } catch { return cooldown; } }
 function publishDeadline(value) { try { localStorage.setItem('photostamp-cooldown', String(value)); } catch {} }
-$('restore').addEventListener('click', () => { if (!image) return; for (const id of ['place','address','captured','zone']) $(id).value = originalFields[id] || ''; fieldSources = {captured: originalFields.captured ? 'photo EXIF' : '', zone: originalFields.zone ? 'photo EXIF' : ''}; placeSource = ''; sourceLabels(); draw(); });
+$('restore').addEventListener('click', () => { if (!image) return; window.dispatchEvent(new Event('photostamp:photochange')); for (const id of ['place','address','captured','zone']) $(id).value = originalFields[id] || ''; fieldSources = {captured: originalFields.captured ? 'photo EXIF' : '', zone: originalFields.zone ? 'photo EXIF' : ''}; placeSource = ''; sourceLabels(); draw(); });
 $('clear').addEventListener('click', () => { ++sequence; image = null; coordinates = null; originalFields = {}; fieldSources = {}; placeSource = ''; for (const id of ['photo','place','address','captured','zone']) $(id).value = ''; $('canvas').hidden = true; $('empty').hidden = false; $('download').disabled = true; $('status').textContent = 'Choose a photo to begin.'; syncWorkspace(); sourceLabels(); });
 $('updateApp').addEventListener('click', () => { if (image && !confirm('Updating clears this editing session. Save your photo first. Update now?')) return; waitingWorker?.postMessage({type:'SKIP_WAITING'}); });
 navigator.serviceWorker?.addEventListener('controllerchange', () => location.reload());
