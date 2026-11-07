@@ -50,3 +50,11 @@ Offline editing works after the app files have been saved. Lookup needs a connec
 ## Simple interface
 
 Before selection, only Choose photo and help appear. After loading, edit the three main caption fields beside/below the preview. Expand Customize caption for styling and export quality, Photo details for time zone and sources, or More photo actions to reset/remove. Settings & help contains Check for updates. A prominent banner appears when a new version is ready; save before updating.
+
+## Choose a location when GPS is missing
+
+After loading a photo, select **Choose a location**. Enter a place name, street address or city (adding the country helps), then press **Search**. Choose the matching result to fill Place and Location details. Review and edit before saving. Existing caption text is replaced only after confirmation.
+
+Search uses this deployment's Geoapify service and sends only the words you submit. It runs on Search, not while typing, and shares the two-second cooldown with GPS lookup. No GPS coordinates are added or recovered. Existing photo GPS, if present, remains separate and optional in the caption. Photo details labels selected text as manually selected. Reset photo details removes the selection; Remove photo clears the session. If offline or no result matches, type the place directly.
+
+A city result may represent the city generally; check the displayed address. This chooser does not offer a draggable map pin.
