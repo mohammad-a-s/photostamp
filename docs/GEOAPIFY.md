@@ -30,3 +30,11 @@ Use the GitHub Pages app (not direct address-bar navigation, which has no Origin
 The official GitHub Pages deployment automatically selects https://imaginative-bavarois-fc2df5.netlify.app/.netlify/functions/reverse. Users only press Find place. Custom endpoints are in Settings & help → Advanced settings; Use PhotoStamp default clears the override. Existing saved custom endpoints are preserved. Netlify deployments use their own same-origin function; other hosts start without a service. Configure forks with their own provider account and allowed origins. Do not point forks at the official service.
 
 The adapter now supplies a compact locality from city/town/village, state and country. Review results because the returned name may identify a nearby business. Shared daily quota enforcement and persistent caching remain deployment work; the browser cooldown is per device.
+
+## Place search
+
+Deploy netlify/functions/search.cjs alongside reverse.cjs using the same GEOAPIFY_API_KEY and ALLOWED_ORIGINS. The official app derives the search endpoint from its configured default service; custom reverse endpoints are not used for text searches. Forks must deploy their own search function. No new key is needed.
+
+Search validates 3–200 characters and requests at most five Geoapify results. It returns only display text, not coordinates or provider credentials. The browser caches up to 30 queries in memory and sends searches only on explicit submission. Existing quota limitations apply across both endpoints. Both Netlify and GitHub Pages need the merged revision before testing the live chooser.
+
+Run node tests/place-search.cjs to verify request validation, result formatting, origin checks, empty results and 429 forwarding.
