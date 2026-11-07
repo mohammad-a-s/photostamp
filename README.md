@@ -1,6 +1,6 @@
-# PhotoStamp v2
+# PhotoStamp — Add a place and date to your photos
 
-A mobile-friendly, installable photo editor for adding place, capture time, and GPS overlays. Static HTML, CSS, JavaScript, and Canvas; no backend or build step.
+Turn your photos into memories with a simple caption showing where and when they were taken. Use PhotoStamp in your browser or add it to your home screen. Your photos stay on your device.
 
 Open PhotoStamp: https://mohammad-a-s.github.io/photostamp/
 
