@@ -6,9 +6,9 @@
 
 1. Choose an original photo. JPEG, PNG and WebP are the safest options; HEIC decoding depends on the browser.
 2. Check the capture time and optional time zone. Missing information stays blank.
-3. Enter a place and short locality, or configure a provider under Location lookup settings and use Look up place from photo GPS.
+3. Enter a place and short locality, or use Find place with the preconfigured service.
 4. Review the returned name. A nearby business is not a verified venue. Correct or remove it as needed.
-5. Review the preview, then use Share stamped photo or Download stamped JPEG.
+5. Review the preview, then use Share stamped photo or Save photo.
 
 The clean default puts a caption below the complete photo. The place is emphasized; address and date/time use smaller text. GPS coordinates start off. Enable them when needed. Include in export lets you hide place, address or time independently. Top and bottom overlays and text size remain adjustable.
 
@@ -20,7 +20,7 @@ Field sources remain visible in the editor and are omitted from the export. The 
 
 Preview uses a maximum 1400 px edge. Export offers original decoded size, capped at 20 megapixels, or a 2048 px sharing size. Caption height is added beneath the photo. JPEG export does not preserve original EXIF; keep the original file. Names end in _stamped.jpg.
 
-Restore original metadata restores fields read from the selected photo and clears entered/lookup place details. Clear photo discards the current session. Closing, reloading or updating also loses the session. Appearance preferences are remembered; photos and edited details are not.
+Reset photo details restores fields read from the selected photo and clears entered/lookup place details. Remove photo discards the current session. Closing, reloading or updating also loses the session. Appearance preferences are remembered; photos and edited details are not.
 
 ## iPhone installation and missing GPS
 
@@ -37,7 +37,7 @@ The browser can only read metadata present in the file it receives. PhotoStamp d
 
 ## Location lookup
 
-The endpoint starts blank; the settings show https://nominatim.openstreetmap.org/reverse as an example. Enter an authorized Nominatim-compatible HTTPS endpoint with browser CORS support. Remember provider is optional; uncheck it to remove the saved endpoint.
+On the official PhotoStamp site, Find place uses Geoapify through Netlify without setup. Under Settings & help → Advanced settings, you can enter an authorized Nominatim-compatible custom endpoint. Remember custom service is optional. Use PhotoStamp default removes the saved override. Forked copies need their own service.
 
 Lookup sends coordinates to the chosen provider, never the photo. A two-second cooldown follows completion; a provider Retry-After delay may extend it. Tabs coordinate requests on the same device, but this does not enforce a limit across all app users. Consult the [provider policy](https://operations.osmfoundation.org/policies/nominatim/) before using public Nominatim. For shared production traffic, arrange aggregate limiting/caching or an appropriate hosted provider.
 
@@ -46,3 +46,7 @@ Lookup sends coordinates to the chosen provider, never the photo. A two-second c
 Save your export before choosing Update app: it reloads and clears the editing session. If no update button appears, connect to the internet, reopen the app, and allow it to check for updates. A waiting update can also activate after all app windows close.
 
 Offline editing works after the app files have been saved. Lookup needs a connection. If cached files have been evicted, load the app online again. Sharing depends on device/browser support; download is the alternative.
+
+## Simple interface
+
+Before selection, only Choose photo and help appear. After loading, edit the three main caption fields beside/below the preview. Expand Customize caption for styling and export quality, Photo details for time zone and sources, or More photo actions to reset/remove. Settings & help contains Check for updates. A prominent banner appears when a new version is ready; save before updating.
