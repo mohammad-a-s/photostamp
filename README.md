@@ -39,7 +39,7 @@ Photos stay in page memory and are never uploaded. The service worker caches onl
 
 ## Optional reverse geocoding
 
-No public API is configured by default. Under **Location lookup settings**, supply an HTTPS Nominatim-compatible `/reverse` endpoint with browser CORS support that you are authorized to use, then click **Look up place from photo GPS**. The endpoint receives latitude/longitude and ordinary connection metadata, but never the photo. Results are cached in memory for the session, requests are user-triggered and throttled, and failures preserve manual editing. The endpoint can be switched at runtime. No API secrets belong in this client.
+The official GitHub Pages site uses the configured Geoapify service through Netlify. Select **Find place** after choosing a GPS photo; no endpoint entry is needed. Custom services are available under **Settings & help → Advanced settings**. Forks must configure their own service; they do not automatically share the official endpoint. The endpoint receives latitude/longitude and ordinary connection metadata, but never the photo. Results are cached in memory for the session, requests are user-triggered and throttled, and failures preserve manual editing. The endpoint can be switched at runtime. No API secrets belong in this client.
 
 If you deliberately choose the public OSMF Nominatim service, you are responsible for its [usage policy](https://operations.osmfoundation.org/policies/nominatim/): the **total application traffic across all users must remain below one request per second**, with identifying Referer/User-Agent, attribution, caching, no autocomplete or bulk queries, and the ability to switch provider. Client throttling alone cannot enforce a shared limit. For a public launch, use an authorized hosted provider or a proxy enforcing aggregate limits and caching. Do not enable the public service casually. OpenStreetMap data is attributed in the app and licensed under ODbL.
 
@@ -91,3 +91,9 @@ Validation for this revision used Chrome with synthetic JPEG fixtures and mocked
 The default caption sits below the photo, with a stronger place heading and smaller, softer supporting text. Place, address and capture time are included when present; GPS coordinates are off by default and can be enabled. Dates display as `6 Nov 2026 · 11:39 · UTC+08:00` when the offset exists. Seconds and field source descriptions are omitted from exports. The full address is still editable: shorten it manually for a compact locality line. There is no separate preset selector.
 
 Existing installations receive caption position and GPS-off defaults once on first loading this revision; subsequent appearance choices are remembered. Source labels remain in the editor. A lookup may return a nearby business rather than the photographed venue: review the place before export. See the [user guide](docs/USER_GUIDE.md).
+
+## v2.3 simpler editing
+
+Choose a photo, check Place / Location details / Date and time, then Save photo or Share. The editor and preview appear after a photo loads. Customize caption holds styling, visibility and quality; Photo details holds time zone, coordinates and sources. Settings & help contains installation, update checking and custom service configuration. Use PhotoStamp default clears a saved custom service. Existing saved custom services remain selected until reset.
+
+The official site's default Geoapify service is only contacted on Find place. The API key remains server-side. Netlify-hosted copies use their own same-origin function and must configure its key and allowed origins. Local/other hosts require a custom endpoint. The current function does not enforce a distributed daily quota; monitor service usage before wider promotion.

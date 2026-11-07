@@ -1,6 +1,8 @@
 // Netlify Lambda-compatible function. Never return or log the provider key.
 exports.handler = async event => {
-  const origin = event.headers?.origin || '';
+  let origin = event.headers?.origin || '';
+  // Same-origin GETs may omit Origin; accept only an explicitly allowed Referer origin.
+  if (!origin && event.headers?.referer) { try { origin = new URL(event.headers.referer).origin; } catch {} }
   const allowed = (process.env.ALLOWED_ORIGINS || 'https://mohammad-a-s.github.io').split(',').map(s => s.trim());
   const headers = {'Content-Type':'application/json', 'Cache-Control':'no-store', 'Vary':'Origin'};
   if (!allowed.includes(origin)) return {statusCode:403,headers,body:JSON.stringify({error:'Origin not allowed'})};
@@ -23,6 +25,8 @@ exports.handler = async event => {
     }
     const data = await response.json(), result = data.results?.[0];
     if (!result || typeof result.formatted !== 'string') return reply(404,{error:'No address found'});
-    return reply(200,{name:result.name || result.address_line1 || result.city || '',display_name:result.formatted});
+    const name = result.name || result.address_line1 || result.city || '';
+    const address = [...new Set([result.city || result.town || result.village, result.state, result.country].filter(Boolean))].filter(part => part.toLowerCase() !== name.toLowerCase()).join(', ');
+    return reply(200,{name,display_name:result.formatted,address});
   } catch { return reply(502,{error:'Lookup unavailable'}); }
 };

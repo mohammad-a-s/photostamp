@@ -4,6 +4,24 @@ let originalFields = {}, fieldSources = {}, waitingWorker;
 let originalName = 'photo', busy = false, cooldown = 0;
 let image = null, coordinates = null, sequence = 0, placeSource = '', dateSource = '', lookupAt = 0, pendingInstall;
 const geocodeCache = new Map();
+// Forks must configure their own service rather than share the official quota.
+const DEFAULT_ENDPOINT = location.hostname === 'mohammad-a-s.github.io'
+  ? 'https://imaginative-bavarois-fc2df5.netlify.app/.netlify/functions/reverse'
+  : location.hostname.endsWith('.netlify.app') ? new URL('/.netlify/functions/reverse', location.origin).href : '';
+$('endpoint').value = DEFAULT_ENDPOINT;
+function updateProvider() {
+ const official = $('endpoint').value === DEFAULT_ENDPOINT && !!DEFAULT_ENDPOINT;
+ $('providerCredit').hidden = !official;
+ $('providerStatus').textContent = official ? 'Using the configured PhotoStamp service.' : $('endpoint').value ? 'Using a custom service.' : 'No service configured. You can still enter a place manually.';
+}
+function syncWorkspace() {
+ $('workspace').hidden = !image;
+ $('chooseLabel').textContent = image ? 'Choose another photo' : 'Choose photo';
+ $('lookupHint').textContent = coordinates ? 'Location found in photo. Find place to add a name.' : 'This photo has no location information. Enter a place below.';
+ $('gpsHelp').hidden = !!coordinates;
+ $('coordinateDetails').textContent = coordinates ? `GPS: ${coordinates.latitude.toFixed(6)}, ${coordinates.longitude.toFixed(6)}` : 'No GPS coordinates in this file.';
+}
+
 function sourceLabels() {
   $('locationSource').textContent = `Place: ${fieldSources.place || 'not provided'} · Address: ${fieldSources.address || 'not provided'}`;
   $('timeSource').textContent = `Capture time: ${fieldSources.captured || 'not provided'} · Zone: ${fieldSources.zone || 'not provided'}`;
@@ -55,7 +73,7 @@ $('photo').addEventListener('change', async event => {
   const file = event.target.files[0]; if (!file) return;
   originalName = file.name.replace(/\.[^.]+$/, '') || 'photo';
   const ticket = ++sequence;
-  image = null; coordinates = null; placeSource = ''; dateSource = ''; fieldSources = {};
+  image = null; coordinates = null; placeSource = ''; dateSource = ''; fieldSources = {}; syncWorkspace();
   for (const id of ['place', 'address', 'captured', 'zone']) $(id).value = '';
   $('download').disabled = true; $('lookup').disabled = true; $('canvas').hidden = true; $('empty').hidden = false;
   $('status').textContent = 'Reading photo on your device…'; sourceLabels();
@@ -74,11 +92,11 @@ $('photo').addEventListener('change', async event => {
       if ($('captured').value) dateSource = 'photo EXIF';
     }
     $('zone').value = typeof metadata.OffsetTimeOriginal === 'string' ? metadata.OffsetTimeOriginal : '';
-    $('status').textContent = `${coordinates ? 'Photo GPS found.' : 'No photo GPS found; enter the place manually.'} ${dateSource ? 'Capture time found.' : 'Capture time missing; enter it manually if known.'}${metadataError ? ' Metadata could not be read.' : ''}`;
+    $('status').textContent = `${coordinates ? 'Photo GPS found.' : 'No location in this photo; enter a place manually.'} ${dateSource ? 'Capture time found.' : 'Capture time missing; enter it manually if known.'}${metadataError ? ' Metadata could not be read.' : ''}`;
     originalFields = Object.fromEntries(['place','address','captured','zone'].map(id => [id, $(id).value]));
     fieldSources = {captured: dateSource, zone: $('zone').value ? 'photo EXIF' : ''};
     $('lookup').disabled = !coordinates || busy || Date.now() < sharedDeadline(); $('download').disabled = false;
-    $('empty').hidden = true; $('canvas').hidden = false; sourceLabels(); draw();
+    $('empty').hidden = true; $('canvas').hidden = false; syncWorkspace(); sourceLabels(); draw();
   } catch { if (ticket === sequence) $('status').textContent = 'This photo could not be opened. Try an original JPEG, PNG, or WebP file.'; }
   finally { URL.revokeObjectURL(url); }
 });
@@ -93,21 +111,21 @@ async function lookup() {
   if (($('place').value || $('address').value) && !confirm('Replace your current place details with a GPS lookup?')) return;
   let url;
   try { url = new URL($('endpoint').value); if (url.protocol !== 'https:' || url.username || url.password) throw Error(); }
-  catch { $('status').textContent = 'Enter an authorized HTTPS reverse-geocoding endpoint in Location lookup settings first.'; return; }
+  catch { $('status').textContent = 'Location service is not configured. Enter a place manually, or check Advanced settings.'; return; }
   const ticket = sequence, originalPlace = $('place').value, originalAddress = $('address').value;
   url.searchParams.set('format', 'jsonv2'); url.searchParams.set('lat', coordinates.latitude); url.searchParams.set('lon', coordinates.longitude);
-  busy = true; publishDeadline(Date.now() + 14000); lookupAt = Date.now(); $('lookup').disabled = true; $('status').textContent = 'Looking up coordinates online…';
+  busy = true; publishDeadline(Date.now() + 14000); lookupAt = Date.now(); $('lookup').disabled = true; $('status').textContent = 'Finding a place…';
   try {
     const key = url.href;
     let data = geocodeCache.get(key);
-    if (!data) { const response = await fetch(url, {credentials: 'omit', referrerPolicy: 'strict-origin-when-cross-origin', signal: AbortSignal.timeout(12000)}); if (!response.ok) { const retry = response.headers.get('Retry-After'); const seconds = Number(retry); const deadline = retry ? (Number.isFinite(seconds) ? Date.now() + seconds * 1000 : Date.parse(retry)) : 0; cooldown = Math.max(cooldown, Number.isFinite(deadline) ? deadline : 0); throw new Error(response.status === 429 ? 'Provider rate limit reached. Wait for the countdown.' : `Provider returned HTTP ${response.status}. Try again later.`); } data = await response.json(); if (typeof data.display_name !== 'string') throw Error(); geocodeCache.set(key, data); }
+    if (!data) { const response = await fetch(url, {credentials: 'omit', referrerPolicy: 'strict-origin-when-cross-origin', signal: AbortSignal.timeout(12000)}); if (!response.ok) { const retry = response.headers.get('Retry-After'); const seconds = Number(retry); const deadline = retry ? (Number.isFinite(seconds) ? Date.now() + seconds * 1000 : Date.parse(retry)) : 0; cooldown = Math.max(cooldown, Number.isFinite(deadline) ? deadline : 0); throw new Error(response.status === 429 ? 'The location service is busy. Wait for the countdown.' : 'The location service is unavailable. Try later or enter a place manually.'); } data = await response.json(); if (typeof data.display_name !== 'string') throw Error(); geocodeCache.set(key, data); }
     if (ticket !== sequence) return;
     if ($('place').value !== originalPlace || $('address').value !== originalAddress) { $('status').textContent = 'Your manual edits were kept. Try lookup again to replace them.'; return; }
-    $('place').value = (data.name || data.display_name.split(',')[0]).slice(0,120); const parts = data.display_name.split(',').map(part => part.trim());
-    $('address').value = parts.filter(part => part.toLowerCase() !== $('place').value.toLowerCase()).slice(0,4).join(', ').slice(0,200);
+    $('place').value = (data.name || data.display_name.split(',')[0]).slice(0,120); const parts = (data.address || data.display_name).split(',').map(part => part.trim());
+    $('address').value = [...new Set(parts)].filter(part => part.toLowerCase() !== $('place').value.toLowerCase()).slice(0,4).join(', ').slice(0,200);
     fieldSources.place = fieldSources.address = 'GPS lookup (approximate)';
     placeSource = 'GPS lookup (approximate)'; sourceLabels(); draw(); $('status').textContent = 'Approximate place found. Review and correct it before exporting.';
-  } catch (error) { if (ticket === sequence) $('status').textContent = error.name === 'TimeoutError' ? 'Lookup timed out. Try again or enter a place manually.' : error.message.includes('Provider') ? error.message : 'Cannot reach the provider. Check your connection and endpoint, or enter a place manually.'; }
+  } catch (error) { if (ticket === sequence) $('status').textContent = error.name === 'TimeoutError' ? 'Lookup timed out. Try again or enter a place manually.' : error.message.includes('location service') ? error.message : 'Cannot find a place right now. Check your connection or enter a place manually.'; }
   finally { busy = false; cooldown = Math.max(cooldown, Date.now() + 2000); publishDeadline(cooldown); }
 }
 $('lookup').addEventListener('click', () => {
@@ -125,14 +143,19 @@ window.addEventListener('beforeinstallprompt', event => { event.preventDefault()
 $('install').addEventListener('click', async () => { if (pendingInstall) { await pendingInstall.prompt(); pendingInstall = null; $('install').hidden = true; } });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').then(async registration => {
   await navigator.serviceWorker.ready; $('offline').textContent = 'App files saved for offline editing.';
-  const update = () => { if (registration.waiting) { waitingWorker = registration.waiting; $('updateApp').hidden = false; } if (registration.waiting) $('offline').textContent = 'Update ready. Close all PhotoStamp windows and reopen to use it.'; };
+  const update = () => { if (registration.waiting) { waitingWorker = registration.waiting; $('updateApp').hidden = false; $('updateBanner').hidden = false; } if (registration.waiting) $('offline').textContent = 'Update ready. Close all PhotoStamp windows and reopen to use it.'; };
   update(); registration.addEventListener('updatefound', () => registration.installing?.addEventListener('statechange', update));
+  $('checkUpdates').addEventListener('click', async () => {
+    $('updateStatus').textContent = 'Checking…';
+    try { await registration.update(); update(); $('updateStatus').textContent = registration.installing ? 'Downloading update. Keep this page open.' : registration.waiting ? 'Update ready above.' : 'You have the latest version.'; }
+    catch { $('updateStatus').textContent = 'Unable to check. Connect to the internet and try again.'; }
+  });
 }).catch(() => { $('offline').textContent = 'Offline setup unavailable. Keep this page online and reload to try again.'; });
 
 setInterval(() => {
  const remaining = Math.max(0, Math.ceil((sharedDeadline() - Date.now()) / 1000));
  $('lookup').disabled = !coordinates || busy || remaining > 0;
- $('lookup').textContent = busy ? 'Looking up…' : remaining ? `Try again in ${remaining}s…` : 'Look up place from photo GPS';
+ $('lookup').textContent = busy ? 'Looking up…' : remaining ? `Try again in ${remaining}s…` : 'Find place';
  $('share').disabled = !image;
 }, 200);
 $('share').hidden = !navigator.canShare;
@@ -144,7 +167,7 @@ $('share').addEventListener('click', () => {
   if (!blob) return;
   const file = new File([blob], `${name}_stamped.jpg`, {type:'image/jpeg'});
   try { if (!navigator.canShare({files:[file]})) throw Error(); await navigator.share({files:[file]}); }
-  catch(error) { if (error.name !== 'AbortError') $('status').textContent = 'Sharing unavailable. Use Download stamped JPEG instead.'; }
+  catch(error) { if (error.name !== 'AbortError') $('status').textContent = 'Sharing unavailable. Use Save photo instead.'; }
  }, 'image/jpeg', .94);
 });
 
@@ -156,6 +179,14 @@ $('rememberProvider').addEventListener('change', rememberProvider); $('endpoint'
 function sharedDeadline() { try { return Math.max(cooldown, Number(localStorage.getItem('photostamp-cooldown')) || 0); } catch { return cooldown; } }
 function publishDeadline(value) { try { localStorage.setItem('photostamp-cooldown', String(value)); } catch {} }
 $('restore').addEventListener('click', () => { if (!image) return; for (const id of ['place','address','captured','zone']) $(id).value = originalFields[id] || ''; fieldSources = {captured: originalFields.captured ? 'photo EXIF' : '', zone: originalFields.zone ? 'photo EXIF' : ''}; placeSource = ''; sourceLabels(); draw(); });
-$('clear').addEventListener('click', () => { ++sequence; image = null; coordinates = null; originalFields = {}; fieldSources = {}; placeSource = ''; for (const id of ['photo','place','address','captured','zone']) $(id).value = ''; $('canvas').hidden = true; $('empty').hidden = false; $('download').disabled = true; $('status').textContent = 'Choose a photo to begin.'; sourceLabels(); });
+$('clear').addEventListener('click', () => { ++sequence; image = null; coordinates = null; originalFields = {}; fieldSources = {}; placeSource = ''; for (const id of ['photo','place','address','captured','zone']) $(id).value = ''; $('canvas').hidden = true; $('empty').hidden = false; $('download').disabled = true; $('status').textContent = 'Choose a photo to begin.'; syncWorkspace(); sourceLabels(); });
 $('updateApp').addEventListener('click', () => { if (image && !confirm('Updating clears this editing session. Save your photo first. Update now?')) return; waitingWorker?.postMessage({type:'SKIP_WAITING'}); });
 navigator.serviceWorker?.addEventListener('controllerchange', () => location.reload());
+
+$('endpoint').addEventListener('input', updateProvider);
+$('defaultProvider').addEventListener('click', () => {
+ $('endpoint').value = DEFAULT_ENDPOINT; $('rememberProvider').checked = false;
+ try { localStorage.removeItem('photostamp-provider'); } catch {}
+ updateProvider();
+});
+updateProvider(); syncWorkspace();

@@ -24,3 +24,9 @@ The free Geoapify plan requires Geoapify and data-source attribution. The app in
 ## Verify
 
 Use the GitHub Pages app (not direct address-bar navigation, which has no Origin header) to test a lookup, invalid provider/key errors, cooldown, export and offline editing. Check that no key appears in page source or browser requests. Real deployment testing requires your configured Netlify project and key.
+
+## Default connection in v2.3
+
+The official GitHub Pages deployment automatically selects https://imaginative-bavarois-fc2df5.netlify.app/.netlify/functions/reverse. Users only press Find place. Custom endpoints are in Settings & help → Advanced settings; Use PhotoStamp default clears the override. Existing saved custom endpoints are preserved. Netlify deployments use their own same-origin function; other hosts start without a service. Configure forks with their own provider account and allowed origins. Do not point forks at the official service.
+
+The adapter now supplies a compact locality from city/town/village, state and country. Review results because the returned name may identify a nearby business. Shared daily quota enforcement and persistent caching remain deployment work; the browser cooldown is per device.
