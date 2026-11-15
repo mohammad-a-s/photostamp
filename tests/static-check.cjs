@@ -17,4 +17,6 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 for (const match of html.matchAll(/(?:src|href)="(\.\/[^"#]+)"/g)) assert.ok(fs.existsSync(path.join(root, match[1])), match[1]);
 assert.ok(!html.includes('src="https://'), 'No runtime CDN scripts');
 assert.ok(fs.statSync(path.join(root, 'lib/exifr.min.js')).size > 50000);
+assert.ok(fs.statSync(path.join(root, 'lib/piexif.js')).size > 50000, 'piexifjs bundled');
+assert.ok(fs.existsSync(path.join(root, 'lib/piexif.LICENSE')), 'piexifjs license');
 console.log(`Static PWA checks passed: ${assets.length} cached assets and ${manifest.icons.length} correctly sized icons.`);

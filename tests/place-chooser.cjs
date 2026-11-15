@@ -4,7 +4,7 @@ class Node {
  addEventListener(name,fn){this.events[name]=fn;} replaceChildren(){this.children=[];} append(...items){this.children.push(...items);} focus(){} click(){return this.events.click?.();}
 }
 const nodes={},win={}, get=id=>nodes[id] ||= new Node();
-const box={URL,Date,Map,Error,Number,Math,Promise,$:get,DEFAULT_ENDPOINT:'https://example.netlify.app/.netlify/functions/reverse',image:{},sequence:1,coordinates:null,fieldSources:{},busy:false,cooldown:0,navigator:{onLine:true},AbortSignal,window:{addEventListener:(name,fn)=>win[name]=fn},document:{createElement:()=>new Node()},setInterval:()=>{},sharedDeadline:()=>0,publishDeadline:()=>{},sourceLabels:()=>{},draw:()=>{},confirm:()=>true,fetch:async()=>({ok:true,json:async()=>({results:[{name:'<Test Airport>',address:'Sepang, Malaysia',formatted:'<Test Airport>, Malaysia'}]})})};
+const box={coordinateSource:'',setCoordinateSource:(source,point)=>{box.coordinateSource=source;box.coordinates=point;},URL,Date,Map,Error,Number,Math,Promise,$:get,DEFAULT_ENDPOINT:'https://example.netlify.app/.netlify/functions/reverse',image:{},sequence:1,coordinates:null,fieldSources:{},busy:false,cooldown:0,navigator:{onLine:true},AbortSignal,window:{addEventListener:(name,fn)=>win[name]=fn},document:{createElement:()=>new Node()},setInterval:()=>{},sharedDeadline:()=>0,publishDeadline:()=>{},sourceLabels:()=>{},draw:()=>{},confirm:()=>true,fetch:async()=>({ok:true,json:async()=>({results:[{name:'<Test Airport>',address:'Sepang, Malaysia',formatted:'<Test Airport>, Malaysia'}]})})};
 vm.createContext(box);vm.runInContext(fs.readFileSync(require.resolve('../site/place-search.js'),'utf8'),box);
 (async()=>{
  get('placeQuery').value='Airport';
@@ -13,9 +13,19 @@ vm.createContext(box);vm.runInContext(fs.readFileSync(require.resolve('../site/p
  assert.equal(get('placeResults').children.length,1);
  get('placeResults').children[0].children[0].click();
  assert.equal(get('place').value,'<Test Airport>');
- assert.equal(box.coordinates,null);
+ assert.equal(box.coordinates,null); // Result without coordinates adds none.
  assert.equal(box.fieldSources.place,'manually selected');
  assert.equal(get('placeSearchPanel').hidden,true);
+ // A result with coordinates sets a searched location, never overriding photo GPS.
+ box.fetch=async()=>({ok:true,json:async()=>({results:[{name:'Gate',address:'Sepang',formatted:'Gate, Sepang',lat:2.7,lon:101.7}]})});
+ get('placeQuery').value='Gate Sepang'; await vm.runInContext('searchPlaces()',box);
+ get('placeResults').children[0].children[0].click();
+ assert.equal(box.coordinateSource,'search'); assert.equal(JSON.stringify(box.coordinates),'{"latitude":2.7,"longitude":101.7}');
+ box.coordinateSource='photo'; box.coordinates={latitude:1,longitude:1};
+ get('placeQuery').value='Gate Sepang again'; await vm.runInContext('searchPlaces()',box);
+ get('placeResults').children[0].children[0].click();
+ assert.equal(JSON.stringify(box.coordinates),'{"latitude":1,"longitude":1}');
+ box.coordinateSource=''; box.coordinates=null;
  // A result for an old photo must never populate a replacement photo.
  let resolve;box.fetch=()=>new Promise(r=>resolve=r);get('placeQuery').value='Different city';
  const pending=vm.runInContext('searchPlaces()',box);

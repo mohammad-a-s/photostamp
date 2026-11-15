@@ -63,8 +63,13 @@ async function searchPlaces() {
     if (!current()) return;
     if (($('place').value || $('address').value) && !confirm('Replace the current place and location details with this selection?')) return;
     $('place').value=result.name.slice(0,120); $('address').value=result.address.slice(0,200);
-    fieldSources.place=fieldSources.address='manually selected'; sourceLabels(); draw();
-    $('chosenLocation').textContent=coordinates ? 'Location selected manually. Optional GPS coordinates still come from the original photo.' : 'Location selected manually. No photo GPS was added.';
+    fieldSources.place=fieldSources.address='manually selected';
+    // Photo GPS always wins. Otherwise the chosen place's coordinates are kept, labelled as a search result.
+    const point = Number.isFinite(result.lat) && Number.isFinite(result.lon) ? {latitude:result.lat, longitude:result.lon} : null;
+    const usePoint = point && coordinateSource !== 'photo';
+    if (usePoint) setCoordinateSource('search', point);
+    sourceLabels(); draw();
+    $('chosenLocation').textContent=coordinateSource === 'photo' ? 'Location selected manually. GPS coordinates still come from the original photo.' : usePoint ? 'Location selected manually. Its map position can be saved in the photo file if you turn that on below.' : 'Location selected manually. No map position was added.';
     $('chosenLocation').hidden=false; closePlaceSearch(); $('place').focus();
     $('status').textContent='Location added. Check your caption, then save.';
    });

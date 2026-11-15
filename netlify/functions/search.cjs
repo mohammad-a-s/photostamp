@@ -27,7 +27,9 @@ exports.handler = async event => {
     const results = data.results.filter(r => typeof r.formatted === 'string').slice(0,5).map(r => {
       const name = r.name || r.address_line1 || r.city || r.formatted;
       const address = [...new Set([r.city || r.town || r.village, r.state, r.country].filter(v => typeof v === 'string'))].filter(v => v.toLowerCase() !== name.toLowerCase()).join(', ');
-      return {name,address,formatted:r.formatted};
+      // Coordinates let the app save a chosen place into the photo file, only if the user asks.
+      const lat = Number(r.lat), lon = Number(r.lon), valid = Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
+      return valid ? {name,address,formatted:r.formatted,lat,lon} : {name,address,formatted:r.formatted};
     });
     return reply(200,{results});
   } catch { return reply(502,{error:'Lookup unavailable'}); }

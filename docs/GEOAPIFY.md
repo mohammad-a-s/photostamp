@@ -35,6 +35,6 @@ The adapter now supplies a compact locality from city/town/village, state and co
 
 Deploy netlify/functions/search.cjs alongside reverse.cjs using the same GEOAPIFY_API_KEY and ALLOWED_ORIGINS. The official app derives the search endpoint from its configured default service; custom reverse endpoints are not used for text searches. Forks must deploy their own search function. No new key is needed.
 
-Search validates 3–200 characters and requests at most five Geoapify results. It returns only display text, not coordinates or provider credentials. The browser caches up to 30 queries in memory and sends searches only on explicit submission. Existing quota limitations apply across both endpoints. Both Netlify and GitHub Pages need the merged revision before testing the live chooser.
+Search validates 3–200 characters and requests at most five Geoapify results. It returns display text and each result's latitude/longitude, never provider credentials. The app keeps the coordinates of a chosen place only for a photo without GPS, and saves them into the exported file only if the user turns that on. The browser caches up to 30 queries in memory and sends searches only on explicit submission. Existing quota limitations apply across both endpoints. Both Netlify and GitHub Pages need the merged revision before testing the live chooser.
 
 Run node tests/place-search.cjs to verify request validation, result formatting, origin checks, empty results and 429 forwarding.

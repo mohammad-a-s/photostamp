@@ -17,7 +17,7 @@ const event=q=>({httpMethod:'GET',headers:{origin:'https://mohammad-a-s.github.i
  assert.equal(requested.hostname,'api.geoapify.com'); assert.equal(requested.searchParams.get('limit'),'5');
  const data=JSON.parse(response.body);
  assert.equal(data.results[0].address,'Sepang, Selangor, Malaysia');
- assert.equal(data.results[0].lat,undefined);
+ assert.equal(data.results[0].lat,2); assert.equal(data.results[0].lon,101);
  assert.ok(!response.body.includes('secret-test-key'));
  ctx.fetch=async()=>({ok:false,status:429,headers:{get:()=> '45'}});
  const limited=await ctx.exports.handler(event('Airport'));
