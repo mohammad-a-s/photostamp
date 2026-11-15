@@ -32,12 +32,12 @@ node --check site/service-worker.js
 python3 -m http.server 8000 --directory site
 ```
 
-Open http://localhost:8000. Also test under /photostamp/ before deployment. Verify an original GPS JPEG, an image without metadata, rotated portrait, long/wrapped text, manual edits, optional coordinates, export sizes, failed lookup, cooldown, HTTP 429, offline reload and update activation. Confirm the clean export has no source descriptions and that source labels remain in the editor.
+Open http://localhost:8000. Also test under /photostamp/ before deployment. Verify an original GPS JPEG, an image without metadata, rotated portrait, long/wrapped text, manual edits, optional coordinates, export sizes, failed lookup, cooldown, HTTP 429, offline reload and update activation. Confirm the clean export has no source descriptions and that source labels remain in the editor. For v2.4, also test Use my current location (allowed and denied), Choose a location, the save-in-file option on and off, that saved files show the right location in Photos and Google Photos, accented place names in the saved description, and a full-size 20 MP export on the target phone.
 
 Use a real iPhone for file picker metadata, install, share-sheet and update checks. Desktop emulation alone does not verify these behaviors.
 
 ## Dependencies and privacy
 
-exifr 7.1.3 is bundled locally in site/lib/ with its MIT license. No runtime CDN is required. Photos stay in page memory. The service worker caches only the enumerated app shell; external geocoding requests are not cached there.
+exifr 7.1.3 (reading) and piexifjs 1.0.6 (writing EXIF on export) are bundled locally in site/lib/ with their MIT licenses. No runtime CDN is required. Photos stay in page memory. The service worker caches only the enumerated app shell; external geocoding requests are not cached there.
 
 No public geocoding endpoint is configured by default. Client cooldowns cannot enforce a provider's aggregate application limit. See the [user guide](USER_GUIDE.md#location-lookup) and provider policy when configuring a service. Do not put API secrets in this static client.

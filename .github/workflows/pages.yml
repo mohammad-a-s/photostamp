@@ -18,6 +18,8 @@ jobs:
         with:
           node-version: '22'
       - run: node tests/static-check.cjs
+      - run: node tests/place-search.cjs
+      - run: node tests/place-chooser.cjs
       - run: node --check site/app.js && node --check site/service-worker.js
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

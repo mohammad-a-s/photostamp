@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.4 — Location for photos without GPS, and photo-file details
+
+- Choose a location: search a place, address or city and pick one of up to five results (search on submit only, shared cooldown).
+- Use my current location for photos without GPS, labelled as the device's location now, not where the photo was taken.
+- Netlify search function for Geoapify forward geocoding; results include coordinates.
+- Saved and shared JPEGs carry place, date, offset and location in EXIF (piexifjs, bundled locally).
+- Photo GPS is saved by default and never replaced. Current or chosen locations are off by default and marked as set manually (GPSProcessingMethod MANUAL).
+- Original camera tags are kept for JPEG originals; orientation is reset because the image is already rotated.
+- The stamped GPS line only ever shows coordinates from the photo itself.
+- Place search and chooser regression tests in CI. Updated offline application cache.
+
 ## v2.2 — Clean caption
 
 - Caption below the photo and GPS coordinates off are the clean defaults.
